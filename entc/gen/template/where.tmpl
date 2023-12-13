@@ -139,6 +139,65 @@ func Not(p predicate.{{ $.Name }}) predicate.{{ $.Name }} {
 	)
 }
 
+// fileds EQ.
+func FieldEQ(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsEQ(s.C(col1), s.C(col2)))
+	})
+}
+
+// fileds NEQ.
+func FieldNEQ(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsNEQ(s.C(col1), s.C(col2)))
+	})
+}
+
+
+// fileds EQ.
+func FieldsEQ(col1 string, col2 string) predicate.TbTarget {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsEQ(s.C(col1), s.C(col2)))
+	})
+}
+
+// fileds NEQ.
+func FieldsNEQ(col1 string, col2 string) predicate.TbTarget {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsNEQ(s.C(col1), s.C(col2)))
+	})
+}
+
+// fileds GT.
+func FieldsGT(col1 string, col2 string) predicate.TbTarget {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsGT(s.C(col1), s.C(col2)))
+	})
+}
+
+// fileds GTE.
+func FieldsGTE(col1 string, col2 string) predicate.TbTarget {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsGTE(s.C(col1), s.C(col2)))
+	})
+}
+
+
+// fileds LT.
+func FieldsLT(col1 string, col2 string) predicate.TbTarget {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsLT(s.C(col1), s.C(col2)))
+	})
+}
+
+// fileds LTE.
+func FieldsLTE(col1 string, col2 string) predicate.TbTarget {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsLTE(s.C(col1), s.C(col2)))
+	})
+}
+
+
 {{ template "where/additional" $ }}
 
 {{ with $tmpls := matchTemplate "where/additional/*" }}
