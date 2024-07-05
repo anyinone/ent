@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"entgo.io/ent"
+	"github.com/anyinone/ent"
 )
 
 // List of policy decisions.

@@ -19,9 +19,9 @@ import (
 	"ariga.io/atlas/sql/schema"
 	"ariga.io/atlas/sql/sqlclient"
 	"ariga.io/atlas/sql/sqltool"
-	"entgo.io/ent/dialect"
-	entsql "entgo.io/ent/dialect/sql"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/dialect"
+	entsql "github.com/anyinone/ent/dialect/sql"
+	"github.com/anyinone/ent/schema/field"
 )
 
 // Atlas atlas migration engine.

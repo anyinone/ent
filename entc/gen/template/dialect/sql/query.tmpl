@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.typeScope */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.typeScope */}}
 
 {{/* Additional fields for the builder. */}}
 {{ define "dialect/sql/query/fields" }}
@@ -468,7 +468,7 @@ func ({{ $receiver }} *{{ $builder }}) sqlQuery(ctx context.Context) *sql.Select
 	{{- $receiver := $.Scope.Receiver }}
 	for _, f := range {{ $receiver }}.ctx.Fields {
 		if !{{ $.Package }}.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("{{ $pkg }}: invalid field %q for query", f)}
+			return &ValidationError{Name: f, err: fmt.Errorf("{{ $pkg }}: 错误字段 %q 在查询中", f)}
 		}
 	}
 {{- end }}

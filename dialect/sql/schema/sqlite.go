@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/sql"
+	"github.com/anyinone/ent/schema/field"
 
 	"ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/schema"

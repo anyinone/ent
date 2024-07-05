@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqljson"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/sql"
+	"github.com/anyinone/ent/dialect/sql/sqljson"
 
 	"ariga.io/atlas/sql/migrate"
 	"github.com/google/uuid"

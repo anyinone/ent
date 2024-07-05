@@ -25,7 +25,7 @@ import (
 	"text/template"
 	"time"
 
-	"entgo.io/ent"
+	"github.com/anyinone/ent"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"

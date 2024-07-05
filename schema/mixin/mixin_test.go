@@ -7,10 +7,10 @@ package mixin_test
 import (
 	"testing"
 
-	"entgo.io/ent"
-	"entgo.io/ent/schema"
-	"entgo.io/ent/schema/edge"
-	"entgo.io/ent/schema/mixin"
+	"github.com/anyinone/ent"
+	"github.com/anyinone/ent/schema"
+	"github.com/anyinone/ent/schema/edge"
+	"github.com/anyinone/ent/schema/mixin"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -16,10 +16,10 @@ import (
 	"text/template"
 	"unicode"
 
-	"entgo.io/ent/cmd/internal/printer"
-	"entgo.io/ent/entc"
-	"entgo.io/ent/entc/gen"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/cmd/internal/printer"
+	"github.com/anyinone/ent/entc"
+	"github.com/anyinone/ent/entc/gen"
+	"github.com/anyinone/ent/schema/field"
 
 	"github.com/spf13/cobra"
 )
@@ -41,7 +41,7 @@ func (t *IDType) Set(s string) error {
 	case field.TypeString.String():
 		*t = IDType(field.TypeString)
 	default:
-		return fmt.Errorf("invalid type %q", s)
+		return fmt.Errorf("错误的类型 %q", s)
 	}
 	return nil
 }
@@ -136,6 +136,26 @@ func DescribeCmd() *cobra.Command {
 				log.Fatalln(err)
 			}
 			printer.Fprint(os.Stdout, graph)
+		},
+	}
+}
+
+// MessageCmd returns the message command for ent/c packages.
+func MessageCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "message [flags] path",
+		Short: "printer a grpc message of the graph schema",
+		Example: examples(
+			"ent message ./ent/schema",
+			"ent message github.com/a8m/x",
+		),
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, path []string) {
+			graph, err := entc.LoadGraph(path[0], &gen.Config{})
+			if err != nil {
+				log.Fatalln(err)
+			}
+			printer.Fmessage(os.Stdout, graph)
 		},
 	}
 }
@@ -259,11 +279,11 @@ const (
 	// default schema package path.
 	defaultSchema = "ent/schema"
 	// ent/generate.go file used for "go generate" command.
-	genFile = "package ent\n\n//go:generate go run -mod=mod entgo.io/ent/cmd/ent generate ./schema\n"
+	genFile = "package ent\n\n//go:generate go run -mod=mod github.com/anyinone/ent/cmd/ent generate ./schema\n"
 	// schema template for the "init" command.
 	defaultTemplate = `package schema
 
-import "entgo.io/ent"
+import "github.com/anyinone/ent"
 
 // {{ . }} holds the schema definition for the {{ . }} entity.
 type {{ . }} struct {

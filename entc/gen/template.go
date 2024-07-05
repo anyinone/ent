@@ -20,8 +20,8 @@ import (
 	"text/template"
 	"text/template/parse"
 
-	"entgo.io/ent/schema"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/schema"
+	"github.com/anyinone/ent/schema/field"
 )
 
 type (
@@ -217,9 +217,9 @@ var (
 		"math":    "math",
 		"strings": "strings",
 		"time":    "time",
-		"ent":     "entgo.io/ent",
-		"dialect": "entgo.io/ent/dialect",
-		"field":   "entgo.io/ent/schema/field",
+		"ent":     "github.com/anyinone/ent",
+		"dialect": "github.com/anyinone/ent/dialect",
+		"field":   "github.com/anyinone/ent/schema/field",
 	}
 )
 
@@ -424,7 +424,7 @@ func (d *Dependency) defaultName() (string, error) {
 			pkg = parts[0]
 		}
 	default:
-		return "", fmt.Errorf("entc/gen: unexpected number of parts: %q", parts)
+		return "", fmt.Errorf("entc/gen: 意外的部分数量: %q", parts)
 	}
 	if r := d.Type.RType; r != nil && (r.Kind == reflect.Array || r.Kind == reflect.Slice) {
 		name = plural(name)

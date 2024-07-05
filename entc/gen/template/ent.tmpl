@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Type */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Type */}}
 
 {{ define "model" }}
 
@@ -103,8 +103,8 @@ type {{ $edgesType }} struct {
 // Update returns a builder for updating this {{ $.Name }}.
 // Note that you need to call {{ $.Name }}.Unwrap() before calling this method if this {{ $.Name }}
 // was returned from a transaction, and the transaction was committed or rolled back.
-func ({{ $receiver }} *{{ $.Name }}) Update() *{{ $.UpdateOneName }} {
-	return New{{ $.ClientName }}({{ $receiver }}.config).UpdateOne({{ $receiver }})
+func ({{ $receiver }} *{{ $.Name }}) Update(u uint64) *{{ $.UpdateOneName }} {
+	return New{{ $.ClientName }}({{ $receiver }}.config).UpdateOne({{ $receiver }}, u)
 }
 
 // Unwrap unwraps the {{ $.Name }} entity that was returned from a transaction after it was closed,
@@ -176,6 +176,30 @@ type {{ $slice }} []*{{ $.Name }}
 		{{- end }}
 		builder.WriteByte(')')
 		return builder.String()
+	}
+	
+	// ToMessage returns grpc message
+	func(t *{{ $.Name }}) ToMessage() *kernel.{{ $.Name }}{
+		k:= &kernel.{{ $.Name }}{
+			Id: t.ID,
+			{{- range $f := $.Fields }}
+			{{ $f.StructField }}: {{ $f.Message }},
+			{{- end }}
+		}
+		{{- range $e := $.Edges }}
+		{{- if not $e.Unique }} 
+		if len(t.Edges.{{ $e.StructField }}) > 0 {
+			for _,item:= range t.Edges.{{ $e.StructField }} {
+				k.{{ $e.StructField }} = append(k.{{ $e.StructField }}, item.ToMessage())
+			}
+		}
+		{{- else }} 
+		if t.Edges.{{ $e.StructField }} != nil {
+			k.{{ $e.StructField }} = t.Edges.{{ $e.StructField }}.ToMessage()
+		}
+		{{- end}}
+		{{- end }}
+		return k
 	}
 {{ end }}
 

@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"entgo.io/ent"
-	"entgo.io/ent/schema"
-	"entgo.io/ent/schema/edge"
-	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/index"
-	"entgo.io/ent/schema/mixin"
+	"github.com/anyinone/ent"
+	"github.com/anyinone/ent/schema"
+	"github.com/anyinone/ent/schema/edge"
+	"github.com/anyinone/ent/schema/field"
+	"github.com/anyinone/ent/schema/index"
+	"github.com/anyinone/ent/schema/mixin"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

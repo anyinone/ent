@@ -11,8 +11,8 @@ import (
 	"strings"
 	"unicode"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/sql"
 )
 
 // HasKey return a predicate for checking that a JSON key

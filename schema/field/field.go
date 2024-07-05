@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"entgo.io/ent/schema"
+	"github.com/anyinone/ent/schema"
 )
 
 // String returns a new Field with type string.
@@ -691,15 +691,6 @@ func (b *bytesBuilder) GoType(typ any) *bytesBuilder {
 	return b
 }
 
-// ValueScanner provides an external value scanner for the given GoType.
-// Using this option allow users to use field types that do not implement
-// the sql.Scanner and driver.Valuer interfaces, such as slices and maps
-// or types exist in external packages (e.g., url.URL).
-func (b *bytesBuilder) ValueScanner(vs any) *bytesBuilder {
-	b.desc.ValueScanner = vs
-	return b
-}
-
 // Annotations adds a list of annotations to the field object to be used by
 // codegen extensions.
 func (b *bytesBuilder) Annotations(annotations ...schema.Annotation) *bytesBuilder {
@@ -1300,6 +1291,7 @@ type Descriptor struct {
 	Nillable      bool                    // nillable struct field.
 	Optional      bool                    // nullable field in database.
 	Immutable     bool                    // create only field.
+	Increment     bool                    // create auto increment field.
 	Default       any                     // default value on create.
 	UpdateDefault any                     // default value on update.
 	Validators    []any                   // validator functions.

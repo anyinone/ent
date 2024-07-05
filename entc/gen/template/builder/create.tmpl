@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Type */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Type */}}
 
 {{ define "create" }}
 {{ $pkg := base $.Config.Package }}
@@ -127,7 +127,11 @@ func ({{ $receiver }} *{{ $builder }}) check() error {
 	{{- end }}
 	{{- range $e := $.EdgesWithID }}
 		{{- if not $e.Optional }}
-			if len({{ $mutation }}.{{ $e.StructField }}IDs()) == 0 {
+			{{- if $e.Unique }}
+				if _, ok := {{ $mutation }}.{{ $e.StructField }}ID(); !ok {
+			{{- else }}
+				if len({{ $mutation }}.{{ $e.StructField }}IDs()) == 0 {
+			{{- end }}
 				return &ValidationError{Name: "{{ $e.Name }}", err: errors.New(`{{ $pkg }}: missing required edge "{{ $.Name }}.{{ $e.Name }}"`)}
 			}
 		{{- end }}

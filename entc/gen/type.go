@@ -18,14 +18,14 @@ import (
 	"unicode"
 
 	"ariga.io/atlas/sql/postgres"
-	"entgo.io/ent"
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/entsql"
-	"entgo.io/ent/dialect/sql/schema"
-	"entgo.io/ent/entc/load"
-	entschema "entgo.io/ent/schema"
-	"entgo.io/ent/schema/edge"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/entsql"
+	"github.com/anyinone/ent/dialect/sql/schema"
+	"github.com/anyinone/ent/entc/load"
+	entschema "github.com/anyinone/ent/schema"
+	"github.com/anyinone/ent/schema/edge"
+	"github.com/anyinone/ent/schema/field"
 )
 
 // The following types and their exported methods used by the codegen
@@ -92,6 +92,8 @@ type (
 		StructTag string
 		// Validators holds the number of validators the field have.
 		Validators int
+		// Comment of the field. default to Name
+		FieldComment string
 		// Position info of the field.
 		Position *load.Position
 		// UserDefined indicates that this field was defined explicitly by the user in
@@ -109,6 +111,8 @@ type (
 		def *load.Edge
 		// Name holds the name of the edge.
 		Name string
+		// EdgeComment holds the comment of the edge
+		EdgeComment string
 		// Type holds a reference to the type this edge is directed to.
 		Type *Type
 		// Optional indicates is this edge is optional on create.
@@ -253,6 +257,10 @@ func NewType(c *Config, schema *load.Schema) (*Type, error) {
 			UserDefined:   true,
 			Annotations:   f.Annotations,
 		}
+		tf.FieldComment = f.Comment
+		if f.Comment == "" {
+			tf.FieldComment = f.Name
+		}
 		if err := typ.checkField(tf, f); err != nil {
 			return nil, err
 		}
@@ -301,6 +309,14 @@ func (t Type) Table() string {
 	}
 	if t.schema != nil && t.schema.Config.Table != "" {
 		return t.schema.Config.Table
+	}
+	return snake(rules.Pluralize(t.Name))
+}
+
+// Table returns SQL table name of the node/type.
+func (t Type) Comment() string {
+	if t.schema != nil && t.schema.Config.Comment != "" {
+		return t.schema.Config.Comment
 	}
 	return snake(rules.Pluralize(t.Name))
 }
@@ -754,7 +770,7 @@ func (t *Type) setupFKs() error {
 	return nil
 }
 
-// setupFieldEdge check the field-edge validity and configures it and its foreign-key.
+// setupEdgeField check the field-edge validity and configures it and its foreign-key.
 func (t *Type) setupFieldEdge(fk *ForeignKey, fkOwner *Edge, fkName string) error {
 	tf, ok := t.fields[fkName]
 	if !ok {
@@ -1095,7 +1111,7 @@ func aliases(g *Graph) {
 // sqlComment returns the SQL database comment for the node (table), if defined and enabled.
 func (t Type) sqlComment() string {
 	if ant := t.EntSQL(); ant == nil || ant.WithComments == nil || !*ant.WithComments {
-		return ""
+		return t.Comment()
 	}
 	ant := &entschema.CommentAnnotation{}
 	if t.Annotations == nil || t.Annotations[ant.Name()] == nil {
@@ -1157,6 +1173,18 @@ func (f Field) StructField() string {
 	return pascal(f.Name)
 }
 
+// StructField returns the struct member of the field in the model.
+func (f Field) Message() string {
+	switch f.Type.String() {
+	case "uint64", "string", "float64", "bool":
+		return "t." + f.StructField()
+	case "uint8":
+		return "uint32(t." + f.StructField() + ")"
+	default:
+		return "t." + f.StructField() + ".String()"
+	}
+}
+
 // EnumNames returns the enum values of a field.
 func (f Field) EnumNames() []string {
 	names := make([]string, 0, len(f.Enums))
@@ -1208,7 +1236,7 @@ var mutMethods = func() map[string]bool {
 // with the mutation methods, prefix the method with "Get".
 func (f Field) MutationGet() string {
 	name := pascal(f.Name)
-	if mutMethods[name] || (name == "SetID" && f.typ.ID.UserDefined) {
+	if mutMethods[name] {
 		name = "Get" + name
 	}
 	return name
@@ -1513,7 +1541,7 @@ func (f Field) ScanTypeField(rec string) string {
 	return expr
 }
 
-// standardNullType reports if the field is one of the standard SQL types.
+// standardSQLType reports if the field is one of the standard SQL types.
 func (f Field) standardNullType() bool {
 	for _, t := range []reflect.Type{
 		nullBoolType,
@@ -1636,6 +1664,7 @@ func (f Field) PK() *schema.Column {
 		c.Default = x
 	}
 	if f.def != nil {
+		c.Increment = f.def.Increment
 		c.SchemaType = f.def.SchemaType
 	}
 	return c
@@ -1655,7 +1684,7 @@ func (f Field) sqlComment() string {
 			return c
 		}
 	}
-	return ""
+	return f.Comment()
 }
 
 // StorageKey returns the storage name of the field.

@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -21,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"entgo.io/ent"
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/schema/field"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +77,7 @@ func TestInt(t *testing.T) {
 	fd = field.Int("active").GoType(Count(0)).Descriptor()
 	assert.NoError(t, fd.Err)
 	assert.Equal(t, "field_test.Count", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "field_test.Count", fd.Info.String())
 	assert.False(t, fd.Info.Nillable)
 	assert.False(t, fd.Info.ValueScanner())
@@ -136,7 +135,7 @@ func TestFloat(t *testing.T) {
 	fd = field.Float("active").GoType(Count(0)).Descriptor()
 	assert.NoError(t, fd.Err)
 	assert.Equal(t, "field_test.Count", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "field_test.Count", fd.Info.String())
 	assert.False(t, fd.Info.Nillable)
 	assert.False(t, fd.Info.ValueScanner())
@@ -170,7 +169,7 @@ func TestBool(t *testing.T) {
 	fd = field.Bool("active").GoType(Status(false)).Descriptor()
 	assert.NoError(t, fd.Err)
 	assert.Equal(t, "field_test.Status", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "field_test.Status", fd.Info.String())
 	assert.False(t, fd.Info.Nillable)
 	assert.False(t, fd.Info.ValueScanner())
@@ -288,58 +287,6 @@ func TestBytes_DefaultFunc(t *testing.T) {
 
 	fd = field.Bytes("ip").GoType(net.IP("127.0.0.1")).DefaultFunc(net.IP("127.0.0.1")).Descriptor()
 	assert.EqualError(t, fd.Err, `field.Bytes("ip").DefaultFunc expects func but got slice`)
-}
-
-type nullBytes []byte
-
-func (b *nullBytes) Scan(v any) error {
-	if v == nil {
-		return nil
-	}
-	switch v := v.(type) {
-	case []byte:
-		*b = v
-		return nil
-	case string:
-		*b = []byte(v)
-		return nil
-	default:
-		return errors.New("unexpected type")
-	}
-}
-
-func (b nullBytes) Value() (driver.Value, error) { return b, nil }
-
-func TestBytes_ValueScanner(t *testing.T) {
-	fd := field.Bytes("dir").
-		ValueScanner(field.ValueScannerFunc[[]byte, *nullBytes]{
-			V: func(s []byte) (driver.Value, error) {
-				return []byte(hex.EncodeToString(s)), nil
-			},
-			S: func(ns *nullBytes) ([]byte, error) {
-				if ns == nil {
-					return nil, nil
-				}
-				b, err := hex.DecodeString(string(*ns))
-				if err != nil {
-					return nil, err
-				}
-				return b, nil
-			},
-		}).Descriptor()
-	require.NoError(t, fd.Err)
-	require.NotNil(t, fd.ValueScanner)
-	_, ok := fd.ValueScanner.(field.ValueScannerFunc[[]byte, *nullBytes])
-	require.True(t, ok)
-
-	fd = field.Bytes("url").
-		GoType(&url.URL{}).
-		ValueScanner(field.BinaryValueScanner[*url.URL]{}).
-		Descriptor()
-	require.NoError(t, fd.Err)
-	require.NotNil(t, fd.ValueScanner)
-	_, ok = fd.ValueScanner.(field.TypeValueScanner[*url.URL])
-	require.True(t, ok)
 }
 
 func TestString_DefaultFunc(t *testing.T) {
@@ -511,7 +458,7 @@ func TestString(t *testing.T) {
 	}
 	fd = field.String("nullable_url").GoType(&tURL{}).Descriptor()
 	assert.Equal(t, "*field_test.tURL", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "*field_test.tURL", fd.Info.String())
 	assert.True(t, fd.Info.ValueScanner())
 	assert.True(t, fd.Info.Stringer())
@@ -552,7 +499,7 @@ func TestTime(t *testing.T) {
 	fd = field.Time("deleted_at").GoType(Time{}).Default(func() Time { return Time{} }).Descriptor()
 	assert.NoError(t, fd.Err)
 	assert.Equal(t, "field_test.Time", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "field_test.Time", fd.Info.String())
 	assert.False(t, fd.Info.Nillable)
 	assert.False(t, fd.Info.ValueScanner())
@@ -596,10 +543,10 @@ func TestJSON(t *testing.T) {
 		Descriptor()
 	assert.True(t, fd.Info.Nillable)
 	assert.Equal(t, "*field_test.T", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.True(t, fd.Info.RType.IsPtr())
 	assert.Equal(t, "T", fd.Info.RType.Name)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.RType.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.RType.PkgPath)
 
 	fd = field.JSON("dir", http.Dir("dir")).
 		Optional().
@@ -750,7 +697,7 @@ func TestField_Enums(t *testing.T) {
 	fd = field.Enum("role").GoType(Role("")).Descriptor()
 	assert.NoError(t, fd.Err)
 	assert.Equal(t, "field_test.Role", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "field_test.Role", fd.Info.String())
 	assert.False(t, fd.Info.Nillable)
 	assert.False(t, fd.Info.ValueScanner())
@@ -760,7 +707,7 @@ func TestField_Enums(t *testing.T) {
 
 	fd = field.Enum("role").GoType(RoleInt(0)).Descriptor()
 	assert.Equal(t, "field_test.RoleInt", fd.Info.Ident)
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.Equal(t, "field_test.RoleInt", fd.Info.String())
 	assert.False(t, fd.Info.Nillable)
 	assert.True(t, fd.Info.ValueScanner())
@@ -817,7 +764,7 @@ func TestField_Other(t *testing.T) {
 	assert.Equal(t, "other", fd.Name)
 	assert.True(t, fd.Unique)
 	assert.Equal(t, "*field_test.custom", fd.Info.String())
-	assert.Equal(t, "entgo.io/ent/schema/field_test", fd.Info.PkgPath)
+	assert.Equal(t, "github.com/anyinone/ent/schema/field_test", fd.Info.PkgPath)
 	assert.NotNil(t, fd.Default)
 
 	fd = field.Other("other", &custom{}).

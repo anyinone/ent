@@ -7,7 +7,7 @@ package main
 import (
 	"log"
 
-	"entgo.io/ent/cmd/internal/base"
+	"github.com/anyinone/ent/cmd/internal/base"
 
 	"github.com/spf13/cobra"
 )
@@ -18,6 +18,7 @@ func main() {
 	cmd.AddCommand(
 		base.NewCmd(),
 		base.DescribeCmd(),
+		base.MessageCmd(),
 		base.GenerateCmd(),
 		base.InitCmd(),
 	)

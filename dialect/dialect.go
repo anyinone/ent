@@ -19,7 +19,6 @@ const (
 	MySQL    = "mysql"
 	SQLite   = "sqlite3"
 	Postgres = "postgres"
-	Gremlin  = "gremlin"
 )
 
 // ExecQuerier wraps the 2 database operations.
@@ -140,7 +139,7 @@ func (d *DebugDriver) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, err
 		BeginTx(context.Context, *sql.TxOptions) (Tx, error)
 	})
 	if !ok {
-		return nil, fmt.Errorf("Driver.BeginTx is not supported")
+		return nil, fmt.Errorf("驱动不支持开启事务")
 	}
 	tx, err := drv.BeginTx(ctx, opts)
 	if err != nil {

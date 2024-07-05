@@ -11,9 +11,9 @@ import (
 	"path"
 	"testing"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/sql"
+	"github.com/anyinone/ent/schema/field"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"

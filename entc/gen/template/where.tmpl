@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Type */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Type */}}
 
 {{ define "where" }}
 
@@ -178,6 +178,49 @@ func Not(p predicate.{{ $.Name }}) predicate.{{ $.Name }} {
 		{{- xtemplate $tmpl . -}}
 	)
 }
+// filed EQ.
+func FieldEQ(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsEQ(s.C(col1), s.C(col2)))
+	})
+}
+
+// filed NEQ.
+func FieldNEQ(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsNEQ(s.C(col1), s.C(col2)))
+	})
+}
+
+// filed GT.
+func FieldGT(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsGT(s.C(col1), s.C(col2)))
+	})
+}
+
+// filed GTE.
+func FieldGTE(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsGTE(s.C(col1), s.C(col2)))
+	})
+}
+
+
+// filed LT.
+func FieldLT(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsLT(s.C(col1), s.C(col2)))
+	})
+}
+
+// filed LTE.
+func FieldLTE(col1 string, col2 string) predicate.{{ $.Name }} {
+	return predicate.{{ $.Name }}(func(s *sql.Selector) {
+		s.Where(sql.ColumnsLTE(s.C(col1), s.C(col2)))
+	})
+}
+
 
 {{ template "where/additional" $ }}
 

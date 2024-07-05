@@ -10,8 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"entgo.io/ent/dialect/gremlin/graph/dsl"
-	"entgo.io/ent/dialect/sql"
+	"github.com/anyinone/ent/dialect/sql"
 )
 
 // A SchemaMode defines what type of schema feature a storage driver support.
@@ -56,10 +55,10 @@ var drivers = []*Storage{
 		Dialects:  []string{"dialect.SQLite", "dialect.MySQL", "dialect.Postgres"},
 		Imports: []string{
 			"database/sql/driver",
-			"entgo.io/ent/dialect/sql",
-			"entgo.io/ent/dialect/sql/sqlgraph",
-			"entgo.io/ent/dialect/sql/sqljson",
-			"entgo.io/ent/schema/field",
+			"github.com/anyinone/ent/dialect/sql",
+			"github.com/anyinone/ent/dialect/sql/sqlgraph",
+			"github.com/anyinone/ent/dialect/sql/sqljson",
+			"github.com/anyinone/ent/schema/field",
 		},
 		SchemaMode: Unique | Indexes | Cascade | Migrate,
 		Ops: func(f *Field) []Op {
@@ -94,23 +93,6 @@ var drivers = []*Storage{
 			}
 		},
 	},
-	{
-		Name:      "gremlin",
-		IdentName: "Gremlin",
-		Builder:   reflect.TypeOf(&dsl.Traversal{}),
-		Dialects:  []string{"dialect.Gremlin"},
-		Imports: []string{
-			"entgo.io/ent/dialect/gremlin",
-			"entgo.io/ent/dialect/gremlin/graph/dsl",
-			"entgo.io/ent/dialect/gremlin/graph/dsl/__",
-			"entgo.io/ent/dialect/gremlin/graph/dsl/g",
-			"entgo.io/ent/dialect/gremlin/graph/dsl/p",
-			"entgo.io/ent/dialect/gremlin/encoding/graphson",
-		},
-		SchemaMode: Unique,
-		OpCode:     opCodes(gremlinCode[:]),
-		Init:       func(*Graph) error { return nil }, // Noop.
-	},
 }
 
 // NewStorage returns the storage driver type from the given string.
@@ -122,7 +104,7 @@ func NewStorage(s string) (*Storage, error) {
 			return d, nil
 		}
 	}
-	return nil, fmt.Errorf("entc/gen: invalid storage driver %q", s)
+	return nil, fmt.Errorf("entc/gen: 无效的存储驱动程序 %q", s)
 }
 
 // String implements the fmt.Stringer interface for template usage.

@@ -8,10 +8,10 @@ package ent
 import (
 	"context"
 
-	"entgo.io/ent/schema"
-	"entgo.io/ent/schema/edge"
-	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/index"
+	"github.com/anyinone/ent/schema"
+	"github.com/anyinone/ent/schema/edge"
+	"github.com/anyinone/ent/schema/field"
+	"github.com/anyinone/ent/schema/index"
 )
 
 type (
@@ -134,6 +134,8 @@ type (
 	Config struct {
 		// A Table is an optional table name defined for the schema.
 		Table string
+		// a comment
+		Comment string
 	}
 
 	// The Mixin type describes a set of methods that can extend
@@ -475,20 +477,6 @@ const (
 
 // Is reports whether o is match the given operation.
 func (i Op) Is(o Op) bool { return i&o != 0 }
-
-// List of query operations used by the codegen.
-const (
-	OpQueryFirst   = "First"
-	OpQueryFirstID = "FirstID"
-	OpQueryOnly    = "Only"
-	OpQueryOnlyID  = "OnlyID"
-	OpQueryAll     = "All"
-	OpQueryIDs     = "IDs"
-	OpQueryCount   = "Count"
-	OpQueryExist   = "Exist"
-	OpQueryGroupBy = "GroupBy"
-	OpQuerySelect  = "Select"
-)
 
 type (
 	// QueryContext contains additional information about

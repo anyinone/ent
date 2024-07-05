@@ -9,17 +9,18 @@ import (
 	"fmt"
 	"reflect"
 
-	"entgo.io/ent"
-	"entgo.io/ent/schema"
-	"entgo.io/ent/schema/edge"
-	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/index"
+	"github.com/anyinone/ent"
+	"github.com/anyinone/ent/schema"
+	"github.com/anyinone/ent/schema/edge"
+	"github.com/anyinone/ent/schema/field"
+	"github.com/anyinone/ent/schema/index"
 )
 
 // Schema represents an ent.Schema that was loaded from a complied user package.
 type Schema struct {
 	Name         string         `json:"name,omitempty"`
 	Config       ent.Config     `json:"config,omitempty"`
+	Comment      string         `json:"comment,omitempty"`
 	Edges        []*Edge        `json:"edges,omitempty"`
 	Fields       []*Field       `json:"fields,omitempty"`
 	Indexes      []*Index       `json:"indexes,omitempty"`
@@ -51,6 +52,7 @@ type Field struct {
 	DefaultValue  any                     `json:"default_value,omitempty"`
 	DefaultKind   reflect.Kind            `json:"default_kind,omitempty"`
 	UpdateDefault bool                    `json:"update_default,omitempty"`
+	Increment     bool                    `json:"increment,omitempty"`
 	Immutable     bool                    `json:"immutable,omitempty"`
 	Validators    int                     `json:"validators,omitempty"`
 	StorageKey    string                  `json:"storage_key,omitempty"`
@@ -132,6 +134,7 @@ func NewField(fd *field.Descriptor) (*Field, error) {
 		Default:       fd.Default != nil,
 		UpdateDefault: fd.UpdateDefault != nil,
 		Immutable:     fd.Immutable,
+		Increment:     fd.Increment,
 		StorageKey:    fd.StorageKey,
 		Validators:    len(fd.Validators),
 		Sensitive:     fd.Sensitive,
@@ -182,15 +185,15 @@ func MarshalSchema(schema ent.Interface) (b []byte, err error) {
 		Name:        indirect(reflect.TypeOf(schema)).Name(),
 		Annotations: make(map[string]any),
 	}
+	if err := s.loadFields(schema); err != nil {
+		return nil, fmt.Errorf("schema %q: %w", s.Name, err)
+	}
 	if err := s.loadMixin(schema); err != nil {
 		return nil, fmt.Errorf("schema %q: %w", s.Name, err)
 	}
 	// Schema annotations override mixed-in annotations.
 	for _, at := range schema.Annotations() {
 		s.addAnnotation(at)
-	}
-	if err := s.loadFields(schema); err != nil {
-		return nil, fmt.Errorf("schema %q: %w", s.Name, err)
 	}
 	edges, err := safeEdges(schema)
 	if err != nil {

@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/entsql"
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/entsql"
+	"github.com/anyinone/ent/dialect/sql"
+	"github.com/anyinone/ent/schema/field"
 
 	"ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/mysql"
@@ -177,7 +177,7 @@ func (d *MySQL) verifyRange(ctx context.Context, tx dialect.ExecQuerier, t *Tabl
 
 // tBuilder returns the MySQL DSL query for table creation.
 func (d *MySQL) tBuilder(t *Table) *sql.TableBuilder {
-	b := sql.CreateTable(t.Name).IfNotExists()
+	b := sql.CreateTable(t.Name).Comment(t.Comment).IfNotExists()
 	for _, c := range t.Columns {
 		b.Column(d.addColumn(c))
 	}
@@ -265,7 +265,7 @@ func (d *MySQL) cType(c *Column) (t string) {
 	case field.TypeFloat32, field.TypeFloat64:
 		t = c.scanTypeOr("double")
 	case field.TypeTime:
-		t = c.scanTypeOr("timestamp")
+		t = c.scanTypeOr("timestamp(3)")
 		// In MariaDB or in MySQL < v8.0.2, the TIMESTAMP column has both `DEFAULT CURRENT_TIMESTAMP`
 		// and `ON UPDATE CURRENT_TIMESTAMP` if neither is specified explicitly. this behavior is
 		// suppressed if the column is defined with a `DEFAULT` clause or with the `NULL` attribute.
@@ -294,7 +294,7 @@ func (d *MySQL) cType(c *Column) (t string) {
 // addColumn returns the DSL query for adding the given column to a table.
 // The syntax/order is: datatype [Charset] [Unique|Increment] [Collation] [Nullable].
 func (d *MySQL) addColumn(c *Column) *sql.ColumnBuilder {
-	b := sql.Column(c.Name).Type(d.cType(c)).Attr(c.Attr)
+	b := sql.Column(c.Name).Comment(c.Comment).Type(d.cType(c)).Attr(c.Attr)
 	c.unique(b)
 	if c.Increment {
 		b.Attr("AUTO_INCREMENT")

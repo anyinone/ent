@@ -14,17 +14,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"text/template/parse"
 
-	"entgo.io/ent/dialect/sql/schema"
-	"entgo.io/ent/entc/load"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/dialect/sql/schema"
+	"github.com/anyinone/ent/entc/load"
+	"github.com/anyinone/ent/schema/field"
 
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/imports"
 )
 
@@ -319,6 +317,7 @@ func (g *Graph) addEdges(schema *load.Schema) {
 				Immutable:   e.Immutable,
 				StructTag:   structTag(e.Name, e.Tag),
 				Annotations: e.Annotations,
+				EdgeComment: e.Comment,
 			})
 		// Inverse only.
 		case e.Inverse && e.Ref == nil:
@@ -334,6 +333,7 @@ func (g *Graph) addEdges(schema *load.Schema) {
 				Immutable:   e.Immutable,
 				StructTag:   structTag(e.Name, e.Tag),
 				Annotations: e.Annotations,
+				EdgeComment: e.Comment,
 			})
 		// Inverse and assoc.
 		case e.Inverse:
@@ -351,6 +351,7 @@ func (g *Graph) addEdges(schema *load.Schema) {
 				Immutable:   e.Immutable,
 				StructTag:   structTag(e.Name, e.Tag),
 				Annotations: e.Annotations,
+				EdgeComment: e.Comment,
 			}
 			to := &Edge{
 				def:         ref,
@@ -363,6 +364,7 @@ func (g *Graph) addEdges(schema *load.Schema) {
 				Immutable:   ref.Immutable,
 				StructTag:   structTag(ref.Name, ref.Tag),
 				Annotations: ref.Annotations,
+				EdgeComment: e.Comment,
 			}
 			from.Ref = to
 			t.Edges = append(t.Edges, from, to)
@@ -616,10 +618,11 @@ func (g *Graph) edgeSchemas() error {
 
 // Tables returns the schema definitions of SQL tables for the graph.
 func (g *Graph) Tables() (all []*schema.Table, err error) {
+	userDefDeleted, userDefVersion := false, false
 	tables := make(map[string]*schema.Table)
 	for _, n := range g.Nodes {
 		table := schema.NewTable(n.Table()).
-			SetComment(n.sqlComment())
+			SetComment(n.Comment())
 		if n.HasOneFieldID() {
 			table.AddPrimary(n.ID.PK())
 		}
@@ -631,6 +634,22 @@ func (g *Graph) Tables() (all []*schema.Table, err error) {
 			if !f.IsEdgeField() {
 				table.AddColumn(f.Column())
 			}
+			if !userDefDeleted && f.StorageKey() == "is_deleted" {
+				userDefDeleted = true
+			}
+			if !userDefVersion && f.StorageKey() == "version" {
+				userDefVersion = true
+			}
+		}
+		if !userDefDeleted {
+			table.AddColumn(&schema.Column{
+				Name: "is_deleted", Type: field.TypeBool, Default: false, Comment: "软删除标记",
+			})
+		}
+		if !userDefVersion {
+			table.AddColumn(&schema.Column{
+				Name: "version", Type: field.TypeUint64, Default: 1, Comment: "版本",
+			})
 		}
 		switch {
 		case tables[table.Name] == nil:
@@ -684,6 +703,9 @@ func (g *Graph) Tables() (all []*schema.Table, err error) {
 					Symbol:     fkSymbol(e, owner, ref),
 				})
 			case M2M:
+				if _, ok := tables[e.Rel.Table]; ok {
+					continue
+				}
 				// If there is an edge schema for the association (i.e. edge.Through).
 				if e.Through != nil || e.Ref != nil && e.Ref.Through != nil {
 					continue
@@ -750,6 +772,9 @@ func (g *Graph) Tables() (all []*schema.Table, err error) {
 			// Set the entsql.IndexAnnotation from the schema if exists.
 			index, _ := table.Index(idx.Name)
 			index.Annotation = sqlIndexAnnotate(idx.Annotations)
+		}
+		if !userDefDeleted {
+			table.AddIndex("soft_is_deleted", false, []string{"is_deleted"})
 		}
 	}
 	if err := ensureUniqueFKs(tables); err != nil {
@@ -822,7 +847,7 @@ func fkSymbols(e *Edge, c1, c2 *schema.Column) (string, string) {
 	return s1, s2
 }
 
-// ensureUniqueFKs ensures constraint names are unique.
+// ensureUniqueNames ensures constraint names are unique.
 func ensureUniqueFKs(tables map[string]*schema.Table) error {
 	fks := make(map[string]*schema.Table)
 	for _, t := range tables {
@@ -955,9 +980,9 @@ func (g *Graph) templates() (*Template, []GraphTemplate) {
 	return templates, external
 }
 
-// ModuleInfo returns the entgo.io/ent version.
+// ModuleInfo returns the github.com/anyinone/ent version.
 func (Config) ModuleInfo() (m debug.Module) {
-	const pkg = "entgo.io/ent"
+	const pkg = "github.com/anyinone/ent"
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return
@@ -1104,22 +1129,16 @@ func (a assets) write() error {
 
 // format runs "goimports" on all assets.
 func (a assets) format() error {
-	var wg errgroup.Group
-	wg.SetLimit(runtime.GOMAXPROCS(0))
 	for path, content := range a.files {
-		path, content := path, content
-		wg.Go(func() error {
-			src, err := imports.Process(path, content, nil)
-			if err != nil {
-				return fmt.Errorf("format file %s: %w", path, err)
-			}
-			if err := os.WriteFile(path, src, 0644); err != nil {
-				return fmt.Errorf("write file %s: %w", path, err)
-			}
-			return nil
-		})
+		src, err := imports.Process(path, content, nil)
+		if err != nil {
+			return fmt.Errorf("format file %s: %w", path, err)
+		}
+		if err := os.WriteFile(path, src, 0644); err != nil {
+			return fmt.Errorf("write file %s: %w", path, err)
+		}
 	}
-	return wg.Wait()
+	return nil
 }
 
 // expect panics if the condition is false.

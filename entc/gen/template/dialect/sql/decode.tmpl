@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.typeScope */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.typeScope */}}
 
 {{ define "dialect/sql/decode/one" }}
 {{ $receiver := $.Receiver }}
@@ -58,7 +58,7 @@ func (*{{ $.Name }}) scanValues(columns []string) ([]any, error) {
 // to the {{ $.Name }} fields.
 func ({{ $receiver }} *{{ $.Name }}) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
-		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
+		return fmt.Errorf("扫描值数目不匹配: %d != %d", m, n)
 	}
 	{{- $idx := "i" }}{{ if eq $idx $receiver }}{{ $idx = "j" }}{{ end }}
 	for {{ $idx }} := range columns {
@@ -72,7 +72,7 @@ func ({{ $receiver }} *{{ $.Name }}) assignValues(columns []string, values []any
 				{{- else }}
 					value, ok := values[{{ $idx }}].(*sql.NullInt64)
 					if !ok {
-						return fmt.Errorf("unexpected type %T for field id", value)
+						return fmt.Errorf("意外类型 %T 对于字段 id", value)
 					}
 					{{ $receiver }}.ID = {{ $.ID.Type }}(value.Int64)
 				{{- end }}
@@ -92,7 +92,7 @@ func ({{ $receiver }} *{{ $.Name }}) assignValues(columns []string, values []any
 					{{- end }}
 				{{- else }}
 					if value, ok := values[{{ $idx }}].(*sql.NullInt64); !ok {
-						return fmt.Errorf("unexpected type %T for edge-field {{ $f.Name}}", value)
+						return fmt.Errorf("意外类型 %T 对于边关系字段 {{ $f.Name}}", value)
 					} else if value.Valid {
 						{{ $receiver }}.{{ $fk.StructField }} = new({{ $f.Type }})
 						{{ if and $f.Nillable (not $f.Type.Nillable) }}*{{ end }}{{ $receiver }}.{{ $fk.StructField }} = {{ $f.Type }}(value.Int64)
@@ -127,16 +127,16 @@ func ({{ $receiver }} *{{ $.Name }}) {{ $.ValueName }}(name string) (ent.Value, 
 		}
 	{{- else if $f.IsJSON -}}
 		if value, ok := values[{{ $i }}].(*{{ $f.ScanType }}); !ok {
-			return fmt.Errorf("unexpected type %T for field {{ $f.Name }}", values[{{ $i }}])
+			return fmt.Errorf("意外类型 %T 对于字段 {{ $f.Name }}", values[{{ $i }}])
 		} else if value != nil && len(*value) > 0 {
 			if err := json.Unmarshal(*value, &{{ $ret }}.{{ $field }}); err != nil {
-				return fmt.Errorf("unmarshal field {{ $f.Name }}: %w", err)
+				return fmt.Errorf("反序列化字段 {{ $f.Name }}: %w", err)
 			}
 		}
 	{{- else }}
 		{{- $scantype := $f.ScanType -}}
 		if value, ok := values[{{ $i }}].(*{{ $scantype }}); !ok {
-			return fmt.Errorf("unexpected type %T for field {{ $f.Name }}", values[{{ $i }}])
+			return fmt.Errorf("意外类型 %T 对于字段 {{ $f.Name }}", values[{{ $i }}])
 		{{- if hasPrefix $scantype "sql.Null" }}
 			} else if value.Valid {
 				{{- if $f.NillableValue }}

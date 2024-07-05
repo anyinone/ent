@@ -17,8 +17,8 @@ import (
 	"time"
 	"unicode"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/sql"
 
 	"ariga.io/atlas/sql/migrate"
 )
@@ -326,6 +326,18 @@ func skipQuoted[T []byte | string](query T, idx int) (T, int) {
 // Tx writes the transaction start.
 func (w *WriteDriver) Tx(context.Context) (dialect.Tx, error) {
 	return dialect.NopTx(w), nil
+}
+
+// Commit writes the transaction commit.
+func (w *WriteDriver) Commit() error {
+	_, err := io.WriteString(w, "COMMIT;\n")
+	return err
+}
+
+// Rollback writes the transaction rollback.
+func (w *WriteDriver) Rollback() error {
+	_, err := io.WriteString(w, "ROLLBACK;\n")
+	return err
 }
 
 // noResult represents a zero result.

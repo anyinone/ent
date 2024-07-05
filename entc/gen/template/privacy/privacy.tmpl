@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Graph */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Graph */}}
 
 {{ define "privacy" }}
 
@@ -13,12 +13,9 @@ in the LICENSE file in the root directory of this source tree.
 {{ end }}
 
 import (
-	"context"
-
 	"{{ $.Config.Package }}"
 
-	"entgo.io/ent/privacy"
-	"entgo.io/ent/entql"
+	"github.com/anyinone/ent/privacy"
 )
 
 {{ $pkg := base $.Config.Package }}
@@ -141,7 +138,7 @@ func DenyMutationOperationRule(op {{ $pkg }}.Op) MutationRule {
 		if m, ok := m.({{ $type }}); ok {
 			return f(ctx, m)
 		}
-		return Denyf("{{ $pkg }}/privacy: unexpected mutation type %T, expect {{ $type }}", m)
+		return Denyf("{{ $pkg }}/privacy: 意外突变类型 %T, expect {{ $type }}", m)
 	}
 {{- end }}
 

@@ -15,9 +15,9 @@ import (
 	"math"
 	"sort"
 
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/dialect"
+	"github.com/anyinone/ent/dialect/sql"
+	"github.com/anyinone/ent/schema/field"
 )
 
 // Rel is an edge relation type.
@@ -299,56 +299,18 @@ func HasNeighborsWith(q *sql.Selector, s *Step, pred func(*sql.Selector)) {
 		q.Where(sql.In(q.C(s.From.Column), join))
 	case s.FromEdgeOwner():
 		to := builder.Table(s.To.Table).Schema(s.To.Schema)
-		// Avoid ambiguity in case both source
-		// and edge tables are the same.
-		if s.To.Table == q.TableName() {
-			to.As(fmt.Sprintf("%s_edge", s.To.Table))
-			// Choose the alias name until we do not
-			// have a collision. Limit to 5 iterations.
-			for i := 1; i <= 5; i++ {
-				if to.C("c") != q.C("c") {
-					break
-				}
-				to.As(fmt.Sprintf("%s_edge_%d", s.To.Table, i))
-			}
-		}
 		matches := builder.Select(to.C(s.To.Column)).
 			From(to)
 		matches.WithContext(q.Context())
-		matches.Where(
-			sql.ColumnsEQ(
-				q.C(s.Edge.Columns[0]),
-				to.C(s.To.Column),
-			),
-		)
 		pred(matches)
-		q.Where(sql.Exists(matches))
+		q.Where(sql.In(q.C(s.Edge.Columns[0]), matches))
 	case s.ToEdgeOwner():
 		to := builder.Table(s.Edge.Table).Schema(s.Edge.Schema)
-		// Avoid ambiguity in case both source
-		// and edge tables are the same.
-		if s.Edge.Table == q.TableName() {
-			to.As(fmt.Sprintf("%s_edge", s.Edge.Table))
-			// Choose the alias name until we do not
-			// have a collision. Limit to 5 iterations.
-			for i := 1; i <= 5; i++ {
-				if to.C("c") != q.C("c") {
-					break
-				}
-				to.As(fmt.Sprintf("%s_edge_%d", s.Edge.Table, i))
-			}
-		}
 		matches := builder.Select(to.C(s.Edge.Columns[0])).
 			From(to)
 		matches.WithContext(q.Context())
-		matches.Where(
-			sql.ColumnsEQ(
-				q.C(s.From.Column),
-				to.C(s.Edge.Columns[0]),
-			),
-		)
 		pred(matches)
-		q.Where(sql.Exists(matches))
+		q.Where(sql.In(q.C(s.From.Column), matches))
 	}
 }
 
@@ -867,14 +829,15 @@ type NotFoundError struct {
 }
 
 func (e *NotFoundError) Error() string {
-	return fmt.Sprintf("record with id %v not found in table %s", e.id, e.table)
+	return fmt.Sprintf("对于id为 %v 的记录没有在表 %s 中找到", e.id, e.table)
 }
 
 // DeleteSpec holds the information for delete one
 // or more nodes in the graph.
 type DeleteSpec struct {
-	Node      *NodeSpec
-	Predicate func(*sql.Selector)
+	UpdateUser *uint64
+	Node       *NodeSpec
+	Predicate  func(*sql.Selector)
 }
 
 // NewDeleteSpec creates a new node deletion spec.
@@ -894,7 +857,7 @@ func DeleteNodes(ctx context.Context, drv dialect.Driver, spec *DeleteSpec) (int
 	if pred := spec.Predicate; pred != nil {
 		pred(selector)
 	}
-	query, args := builder.Delete(spec.Node.Table).Schema(spec.Node.Schema).FromSelect(selector).Query()
+	query, args := builder.Delete(spec.Node.Table).Schema(spec.Node.Schema).FromSelect(selector).SetUpdateUser(spec.UpdateUser).Query()
 	if err := drv.Exec(ctx, query, args, &res); err != nil {
 		return 0, err
 	}
@@ -1122,9 +1085,9 @@ func (u *updater) node(ctx context.Context, tx dialect.ExecQuerier) error {
 			sql.EQ(u.Node.CompositeID[1].Column, u.Node.CompositeID[1].Value),
 		)
 	case len(u.Node.CompositeID) != 2:
-		return fmt.Errorf("sql/sqlgraph: invalid composite id for update table %q", u.Node.Table)
+		return fmt.Errorf("sql解析: 更新表的复合id无效 %q", u.Node.Table)
 	default:
-		return fmt.Errorf("sql/sqlgraph: missing node id for update table %q", u.Node.Table)
+		return fmt.Errorf("sql解析: 缺少更新表的节点id %q", u.Node.Table)
 	}
 	update := u.builder.Update(u.Node.Table).Schema(u.Node.Schema).Where(idp)
 	if pred := u.Predicate; pred != nil {
@@ -1289,13 +1252,21 @@ func (u *updater) updateTable(ctx context.Context, stmt *sql.UpdateBuilder) (int
 }
 
 func (u *updater) setExternalEdges(ctx context.Context, ids []driver.Value, addEdges, clearEdges map[Rel][]*EdgeSpec) error {
-	if err := u.graph.clearM2MEdges(ctx, ids, clearEdges[M2M]); err != nil {
+	x := new(uint64)
+	for _, item := range u.UpdateSpec.Fields.Set {
+		if item.Column == "update_user" {
+			if value, ok := item.Value.(uint64); ok {
+				*x = uint64(value)
+			}
+		}
+	}
+	if err := u.graph.clearM2MEdges(ctx, ids, clearEdges[M2M], x); err != nil {
 		return err
 	}
 	if err := u.graph.addM2MEdges(ctx, ids, addEdges[M2M]); err != nil {
 		return err
 	}
-	if err := u.graph.clearFKEdges(ctx, ids, append(clearEdges[O2M], clearEdges[O2O]...)); err != nil {
+	if err := u.graph.clearFKEdges(ctx, ids, append(clearEdges[O2M], clearEdges[O2O]...), x); err != nil {
 		return err
 	}
 	if err := u.graph.addFKEdges(ctx, ids, append(addEdges[O2M], addEdges[O2O]...)); err != nil {
@@ -1651,7 +1622,7 @@ type graph struct {
 	builder *sql.DialectBuilder
 }
 
-func (g *graph) clearM2MEdges(ctx context.Context, ids []driver.Value, edges EdgeSpecs) error {
+func (g *graph) clearM2MEdges(ctx context.Context, ids []driver.Value, edges EdgeSpecs, u *uint64) error {
 	// Remove all M2M edges from the same type at once.
 	// The EdgeSpec is the same for all members in a group.
 	tables := edges.GroupTable()
@@ -1684,7 +1655,7 @@ func (g *graph) clearM2MEdges(ctx context.Context, ids []driver.Value, edges Edg
 			// generated code), it should be the same for all EdgeSpecs.
 			deleter.Schema(edges[0].Schema)
 		}
-		query, args := deleter.Query()
+		query, args := deleter.SetUpdateUser(u).Query()
 		if err := g.tx.Exec(ctx, query, args, nil); err != nil {
 			return fmt.Errorf("remove m2m edge for table %s: %w", table, err)
 		}
@@ -1789,7 +1760,7 @@ func (g *graph) batchAddM2M(ctx context.Context, spec *BatchCreateSpec) error {
 	return nil
 }
 
-func (g *graph) clearFKEdges(ctx context.Context, ids []driver.Value, edges []*EdgeSpec) error {
+func (g *graph) clearFKEdges(ctx context.Context, ids []driver.Value, edges []*EdgeSpec, u *uint64) error {
 	for _, edge := range edges {
 		if edge.Rel == O2O && edge.Inverse {
 			continue
@@ -1800,10 +1771,12 @@ func (g *graph) clearFKEdges(ctx context.Context, ids []driver.Value, edges []*E
 		if nodes := edge.Target.Nodes; len(nodes) > 0 {
 			pred = matchIDs(edge.Target.IDSpec.Column, edge.Target.Nodes, edge.Columns[0], ids)
 		}
-		query, args := g.builder.Update(edge.Table).
-			SetNull(edge.Columns[0]).
-			Where(pred).
-			Query()
+		// query, args := g.builder.Update(edge.Table).
+		// 	SetNull(edge.Columns[0]).
+		// 	Where(pred).
+		// 	Query()
+
+		query, args := g.builder.Delete(edge.Table).Where(pred).SetUpdateUser(u).Query()
 		if err := g.tx.Exec(ctx, query, args, nil); err != nil {
 			return fmt.Errorf("add %s edge for table %s: %w", edge.Rel, edge.Table, err)
 		}

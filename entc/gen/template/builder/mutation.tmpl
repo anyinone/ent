@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Graph */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Graph */}}
 
 {{ define "mutation" }}
 
@@ -15,14 +15,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
-
 	{{- range $n := $.Nodes }}
 		{{ $n.PackageAlias }} "{{ $.Config.Package }}/{{ $n.PackageDir }}"
 		{{- template "import/types" $n }}
 	{{- end }}
-	"entgo.io/ent"
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent"
 )
 
 const (
@@ -740,7 +737,7 @@ func (m *{{ $mutation }}) ClearEdge(name string) error {
 		{{- end }}
 		}
 	{{- end }}
-	return fmt.Errorf("unknown {{ $n.Name }} unique edge %s", name)
+	return fmt.Errorf("未知的 {{ $n.Name }} 唯一边关系 %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
@@ -756,7 +753,7 @@ func (m *{{ $mutation }}) ResetEdge(name string) error {
 		{{- end }}
 		}
 	{{- end }}
-	return fmt.Errorf("unknown {{ $n.Name }} edge %s", name)
+	return fmt.Errorf("未知的 {{ $n.Name }} 边关系 %s", name)
 }
 {{ end }}
 

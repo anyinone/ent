@@ -17,7 +17,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"entgo.io/ent/schema/field"
+	"github.com/anyinone/ent/schema/field"
 
 	"github.com/go-openapi/inflect"
 )
@@ -275,7 +275,7 @@ type graphScope struct {
 //	{{ end}}
 func extend(v any, kv ...any) (any, error) {
 	if len(kv)%2 != 0 {
-		return nil, fmt.Errorf("invalid number of parameters: %d", len(kv))
+		return nil, fmt.Errorf("参数数量无效: %d", len(kv))
 	}
 	scope := make(map[any]any, len(kv)/2)
 	for i := 0; i < len(kv); i += 2 {
@@ -297,7 +297,7 @@ func extend(v any, kv ...any) (any, error) {
 		}
 		return &graphScope{Graph: v.Graph, Scope: scope}, nil
 	default:
-		return nil, fmt.Errorf("invalid type for extend: %T", v)
+		return nil, fmt.Errorf("扩展的类型无效: %T", v)
 	}
 }
 
@@ -355,7 +355,7 @@ func aggregate() map[string]bool {
 func keys(v reflect.Value) ([]string, error) {
 	v = indirect(v)
 	if k := v.Type().Kind(); k != reflect.Map {
-		return nil, fmt.Errorf("expect map for keys, got: %s", k)
+		return nil, fmt.Errorf("键的预期映射, 得到了: %s", k)
 	}
 	keys := make([]string, v.Len())
 	for i, v := range v.MapKeys() {
@@ -367,7 +367,7 @@ func keys(v reflect.Value) ([]string, error) {
 
 // primitives returns all primitives types.
 func primitives() []string {
-	return []string{field.TypeString.String(), field.TypeInt.String(), field.TypeFloat64.String(), field.TypeBool.String()}
+	return []string{field.TypeString.String(), field.TypeInt.String(), field.TypeUint64.String(), field.TypeFloat64.String(), field.TypeBool.String()}
 }
 
 // join is a wrapper around strings.Join to provide consistent output.

@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Graph */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Graph */}}
 
 {{ define "client/init" }}
 // Client is the client that holds all ent builders.
@@ -52,7 +52,6 @@ func (c *Client) init() {
 {{ $deps := list }}{{ with $.Config.Annotations }}{{ $deps = $.Config.Annotations.Dependencies }}{{ end }}
 
 import (
-	"context"
 	"log"
 
 	"{{ $.Config.Package }}/migrate"
@@ -62,7 +61,7 @@ import (
 	{{- range $dep := $deps }}
 		{{ $dep.Type.PkgName }} "{{ $dep.Type.PkgPath }}"
 	{{- end }}
-	"entgo.io/ent/dialect"
+	"github.com/anyinone/ent/dialect"
 	{{ range $import := $.Storage.Imports -}}
 		"{{ $import }}"
 	{{ end -}}
@@ -163,12 +162,12 @@ func Open(driverName, dataSourceName string, options ...Option) (*Client, error)
 		{{- $tmpl := printf "dialect/%s/client/open" $.Storage -}}
 		{{- xtemplate $tmpl . -}}
 	default:
-		return nil, fmt.Errorf("unsupported driver: %q", driverName)
+		return nil, fmt.Errorf("不支持的驱动程序: %q", driverName)
 	}
 }
 
 // ErrTxStarted is returned when trying to start a new transaction from a transactional client.
-var ErrTxStarted = errors.New("{{ $pkg }}: cannot start a transaction within a transaction")
+var ErrTxStarted = errors.New("{{ $pkg }}: 无法在事务中启动事务")
 
 // Tx returns a new transactional client. The provided context
 // is used until the transaction is committed or rolled back.
@@ -178,7 +177,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}
 	tx, err := newTx(ctx, c.driver)
 	if err != nil {
-		return nil, fmt.Errorf("{{ $pkg }}: starting a transaction: %w", err)
+		return nil, fmt.Errorf("{{ $pkg }}: 启动事务: %w", err)
 	}
 	cfg := c.config
 	cfg.driver = tx
@@ -196,6 +195,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 {{- if hasTemplate $tmpl }}
     {{- xtemplate $tmpl . }}
 {{- end }}
+// SoftDeleted open soft deleted 
+// delete data to set is_deleted = true
+func (c *Client) SoftDelete() *Client {
+	sql.SetSoftDelete(true)
+	return c
+}
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
@@ -304,8 +309,10 @@ func (c *{{ $client }}) Intercept(interceptors ...Interceptor) {
 }
 
 // Create returns a builder for creating a {{ $n.Name }} entity.
-func (c *{{ $client }}) Create() *{{ $n.CreateName }} {
+func (c *{{ $client }}) Create(u uint64) *{{ $n.CreateName }} {
 	mutation := new{{ $n.MutationName }}(c.config, OpCreate)
+	mutation.SetCreateUser(u)
+	mutation.SetUpdateUser(u)
 	return &{{ $n.CreateName }}{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
@@ -316,7 +323,7 @@ func (c *{{ $client }}) CreateBulk(builders ...*{{ $n.CreateName }}) *{{ $n.Crea
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *{{ $client }}) MapCreateBulk(slice any, setFunc func(*{{ $n.CreateName }}, int)) *{{ $n.CreateBulkName }} {
+func (c *{{ $client }}) MapCreateBulk(u uint64, slice any, setFunc func(*{{ $n.CreateName }}, int)) *{{ $n.CreateBulkName }} {
 	{{- /* This check should be replaced with type-parameter method, if it will be supported by Go. */}}
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
@@ -324,24 +331,27 @@ func (c *{{ $client }}) MapCreateBulk(slice any, setFunc func(*{{ $n.CreateName 
 	}
 	builders := make([]*{{ $n.CreateName }}, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
+		builders[i] = c.Create(u)
 		setFunc(builders[i], i)
 	}
 	return &{{ $n.CreateBulkName }}{config: c.config, builders: builders}
 }
 
 // Update returns an update builder for {{ $n.Name }}.
-func (c *{{ $client }}) Update() *{{ $n.UpdateName }} {
+func (c *{{ $client }}) Update(u uint64) *{{ $n.UpdateName }} {
 	mutation := new{{ $n.MutationName }}(c.config, OpUpdate)
+	mutation.SetUpdateUser(u)
 	return &{{ $n.UpdateName }}{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *{{ $client }}) UpdateOne({{ $rec }} *{{ $n.Name }}) *{{ $n.UpdateOneName }} {
+func (c *{{ $client }}) UpdateOne({{ $rec }} *{{ $n.Name }},u uint64) *{{ $n.UpdateOneName }} {
 	{{- if $n.HasOneFieldID }}
 		mutation := new{{ $n.MutationName }}(c.config, OpUpdateOne, {{ print "with" $n.Name }}({{ $rec }}))
+		mutation.SetUpdateUser(u)
 	{{- else }}
 		mutation := new{{ $n.MutationName }}(c.config, OpUpdateOne)
+		mutation.SetUpdateUser(u)
 		{{- range $id := $n.EdgeSchema.ID }}
 			mutation.{{ $id.BuilderField }} = &{{ $rec }}.{{ $id.StructField }}
 		{{- end }}
@@ -351,28 +361,30 @@ func (c *{{ $client }}) UpdateOne({{ $rec }} *{{ $n.Name }}) *{{ $n.UpdateOneNam
 
 {{ with $n.HasOneFieldID }}
 	// UpdateOneID returns an update builder for the given id.
-	func (c *{{ $client }}) UpdateOneID(id {{ $n.ID.Type }}) *{{ $n.UpdateOneName }} {
+	func (c *{{ $client }}) UpdateOneID(id {{ $n.ID.Type }},u uint64) *{{ $n.UpdateOneName }} {
 		mutation := new{{ $n.MutationName }}(c.config, OpUpdateOne, {{ print "with" $n.Name "ID" }}(id))
+		mutation.SetUpdateUser(u)
 		return &{{ $n.UpdateOneName }}{config: c.config, hooks: c.Hooks(), mutation: mutation}
 	}
 {{ end }}
 
 // Delete returns a delete builder for {{ $n.Name }}.
-func (c *{{ $client }}) Delete() *{{ $n.DeleteName }} {
+func (c *{{ $client }}) Delete(u uint64) *{{ $n.DeleteName }} {
 	mutation := new{{ $n.MutationName }}(c.config, OpDelete)
+	mutation.SetUpdateUser(u)
 	return &{{ $n.DeleteName }}{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 {{ with $n.HasOneFieldID }}
 	// DeleteOne returns a builder for deleting the given entity.
-	func (c *{{ $client }}) DeleteOne({{ $rec }} *{{ $n.Name }}) *{{ $n.DeleteOneName }} {
-		return c.DeleteOneID({{ $rec }}.ID)
+	func (c *{{ $client }}) DeleteOne({{ $rec }} *{{ $n.Name }},u uint64) *{{ $n.DeleteOneName }} {
+		return c.DeleteOneID({{ $rec }}.ID, u)
 	}
 
 	// DeleteOneID returns a builder for deleting the given entity by its id.
-	func (c *{{ $client }}) DeleteOneID(id {{ $n.ID.Type }}) *{{ $n.DeleteOneName }} {
+	func (c *{{ $client }}) DeleteOneID(id {{ $n.ID.Type }},u uint64) *{{ $n.DeleteOneName }} {
 		{{- $builder := "builder" }}{{ if eq $n.Package $builder }}{{ $builder = "builderC" }}{{ end }}
-		{{ $builder }} := c.Delete().Where({{ $n.Package }}.ID(id))
+		{{ $builder }} := c.Delete(u).Where({{ $n.Package }}.ID(id))
 		{{ $builder }}.mutation.id = &id
 		{{ $builder }}.mutation.op = OpDeleteOne
 		return &{{ $n.DeleteOneName }}{ {{ $builder }} }

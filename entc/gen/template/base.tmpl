@@ -4,7 +4,7 @@ This source code is licensed under the Apache 2.0 license found
 in the LICENSE file in the root directory of this source tree.
 */}}
 
-{{/* gotype: entgo.io/ent/entc/gen.Graph */}}
+{{/* gotype: github.com/anyinone/ent/entc/gen.Graph */}}
 
 {{ define "base" }}
 
@@ -145,7 +145,7 @@ type NotFoundError struct {
 
 // Error implements the error interface.
 func (e *NotFoundError) Error() string {
-	return "{{ $pkg }}: " + e.label + " not found"
+	return "{{ $pkg }}: " + e.label + " 没有找到"
 }
 
 // IsNotFound returns a boolean indicating whether the error is a not found error.

@@ -18,9 +18,20 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
-	"entgo.io/ent/dialect"
+	"github.com/anyinone/ent/dialect"
 )
+
+var softDelete = false
+
+func SetSoftDelete(value bool) {
+	softDelete = value
+}
+
+func GetSoftDelete() bool {
+	return softDelete
+}
 
 // Querier wraps the basic Query method that is implemented
 // by the different builders in this file.
@@ -40,6 +51,7 @@ type ColumnBuilder struct {
 	Builder
 	typ    string             // column type.
 	name   string             // column name.
+	remark string             // column description
 	attr   string             // extra attributes.
 	modify bool               // modify existing.
 	fk     *ForeignKeyBuilder // foreign-key constraint.
@@ -50,6 +62,12 @@ type ColumnBuilder struct {
 //
 //	sql.Column("group_id").Type("int").Attr("UNIQUE")
 func Column(name string) *ColumnBuilder { return &ColumnBuilder{name: name} }
+
+// Type sets the column type.
+func (c *ColumnBuilder) Comment(r string) *ColumnBuilder {
+	c.remark = r
+	return c
+}
 
 // Type sets the column type.
 func (c *ColumnBuilder) Type(t string) *ColumnBuilder {
@@ -101,6 +119,7 @@ func (c *ColumnBuilder) Query() (string, []any) {
 		c.WriteString(" CHECK ")
 		c.Wrap(c.check)
 	}
+	c.WriteString(" COMMENT '" + c.remark + "'")
 	return c.String(), c.args
 }
 
@@ -108,6 +127,7 @@ func (c *ColumnBuilder) Query() (string, []any) {
 type TableBuilder struct {
 	Builder
 	name        string           // table name.
+	remark      string           // table description
 	exists      bool             // check existence.
 	charset     string           // table charset.
 	collation   string           // table collation.
@@ -127,6 +147,12 @@ type TableBuilder struct {
 //		).
 //		PrimaryKey("id")
 func CreateTable(name string) *TableBuilder { return &TableBuilder{name: name} }
+
+// IfNotExists appends the `IF NOT EXISTS` clause to the `CREATE TABLE` statement.
+func (t *TableBuilder) Comment(r string) *TableBuilder {
+	t.remark = r
+	return t
+}
 
 // IfNotExists appends the `IF NOT EXISTS` clause to the `CREATE TABLE` statement.
 func (t *TableBuilder) IfNotExists() *TableBuilder {
@@ -237,6 +263,7 @@ func (t *TableBuilder) Query() (string, []any) {
 	if t.options != "" {
 		t.WriteString(" " + t.options)
 	}
+	t.WriteString(" COMMENT = '" + t.remark + "'")
 	return t.String(), t.args
 }
 
@@ -892,6 +919,7 @@ func (i *InsertBuilder) OnConflict(opts ...ConflictOption) *InsertBuilder {
 type UpdateSet struct {
 	*UpdateBuilder
 	columns []string
+	update  *UpdateBuilder
 }
 
 // Table returns the table the `UPSERT` statement is executed on.
@@ -1049,7 +1077,11 @@ type UpdateBuilder struct {
 // Update creates a builder for the `UPDATE` statement.
 //
 //	Update("users").Set("name", "foo").Set("age", 10)
-func Update(table string) *UpdateBuilder { return &UpdateBuilder{table: table} }
+func Update(table string) *UpdateBuilder {
+	updater := &UpdateBuilder{table: table}
+	updater.Add("version", 1)
+	return updater
+}
 
 // Schema sets the database name for the updated table.
 func (u *UpdateBuilder) Schema(name string) *UpdateBuilder {
@@ -1205,9 +1237,10 @@ func (u *UpdateBuilder) writeSetter(b *Builder) {
 // DeleteBuilder is a builder for `DELETE` statement.
 type DeleteBuilder struct {
 	Builder
-	table  string
-	schema string
-	where  *Predicate
+	table      string
+	schema     string
+	where      *Predicate
+	updateUser *uint64
 }
 
 // Delete creates a builder for the `DELETE` statement.
@@ -1250,8 +1283,25 @@ func (d *DeleteBuilder) FromSelect(s *Selector) *DeleteBuilder {
 	return d
 }
 
+// FromSelect makes it possible to delete a sub query.
+func (d *DeleteBuilder) SetUpdateUser(u *uint64) *DeleteBuilder {
+	d.updateUser = u
+	return d
+}
+
 // Query returns query representation of a `DELETE` statement.
 func (d *DeleteBuilder) Query() (string, []any) {
+	if softDelete {
+		updater := Update(d.table).
+			Schema(d.schema).
+			Where(d.where).
+			Set("is_deleted", true).
+			Set("update_time", time.Now().Format("2006-01-02 15:04:05"))
+		if d.updateUser != nil {
+			updater.Set("update_user", *d.updateUser)
+		}
+		return updater.Query()
+	}
 	d.WriteString("DELETE FROM ")
 	d.writeSchema(d.schema)
 	d.Ident(d.table)
@@ -2370,6 +2420,9 @@ func (s *Selector) AppendFrom(t TableView) *Selector {
 	if st, ok := t.(state); ok {
 		st.SetDialect(s.dialect)
 	}
+	if softDelete {
+		s.Where(EQ(s.C("is_deleted"), false))
+	}
 	return s
 }
 
@@ -2512,7 +2565,7 @@ func selectTable(t TableView) *SelectTable {
 	case *queryView, *WithBuilder:
 		return nil
 	default:
-		panic(fmt.Sprintf("unexpected TableView %T", t))
+		panic(fmt.Sprintf("视图不存在 %T", t))
 	}
 }
 
@@ -2524,7 +2577,7 @@ func (s *Selector) TableName() string {
 	case *Selector:
 		return view.as
 	default:
-		panic(fmt.Sprintf("unhandled TableView type %T", s.from))
+		panic(fmt.Sprintf("没有绑定的视图类型 %T", s.from))
 	}
 }
 
@@ -3800,6 +3853,11 @@ func (b Builder) postgres() bool {
 	return b.Dialect() == dialect.Postgres
 }
 
+// mysql reports if the builder dialect is MySQL.
+func (b Builder) mysql() bool {
+	return b.Dialect() == dialect.MySQL
+}
+
 // sqlite reports if the builder dialect is SQLite.
 func (b Builder) sqlite() bool {
 	return b.Dialect() == dialect.SQLite
@@ -3835,7 +3893,7 @@ func (b *Builder) unquote(s string) string {
 	return s
 }
 
-// isQualified reports if the given string is a qualified identifier.
+// isIdent reports if the given string is a qualified identifier.
 func (b *Builder) isQualified(s string) bool {
 	ident, pg := b.isIdent(s), b.postgres()
 	return !ident && len(s) > 2 && strings.ContainsRune(s[1:len(s)-1], '.') || // <qualifier>.<column>
